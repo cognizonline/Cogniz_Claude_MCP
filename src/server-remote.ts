@@ -278,7 +278,10 @@ server.registerTool(
         project_id: params.project_id || config.project_id || "default"
       };
 
-      const results = await makeApiRequest<any[]>("/search", "GET", undefined, searchParams);
+      const response = await makeApiRequest<any>("/search", "GET", undefined, searchParams);
+
+      // API returns {query, results: [...], storage_type} - extract the results array
+      const results = Array.isArray(response) ? response : (response.results || []);
 
       if (!results || results.length === 0) {
         const msg = `No memories found matching '${params.query}'`;
@@ -321,7 +324,7 @@ server.registerTool(
             text: JSON.stringify({
               success: true,
               count: results.length,
-              memories: results.map(m => ({
+              memories: results.map((m: any) => ({
                 id: m.id,
                 content: m.content.substring(0, 200) + (m.content.length > 200 ? "..." : ""),
                 project: m.project_name,
@@ -473,7 +476,10 @@ server.registerTool(
   },
   async (params: ListProjectsInput) => {
     try {
-      const projects = await makeApiRequest<any[]>("/projects", "GET");
+      const response = await makeApiRequest<any>("/projects", "GET");
+
+      // API might return array directly or {projects: [...]} - handle both
+      const projects = Array.isArray(response) ? response : (response.projects || []);
 
       if (!projects || projects.length === 0) {
         return {
@@ -509,7 +515,7 @@ server.registerTool(
             text: JSON.stringify({
               success: true,
               count: projects.length,
-              projects: projects.map(p => ({
+              projects: projects.map((p: any) => ({
                 id: p.id,
                 name: p.name,
                 description: p.description,
