@@ -10,7 +10,7 @@
 
 import express from "express";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import axios from "axios";
 import { z } from "zod";
 
@@ -513,40 +513,49 @@ app.post("/mcp", async (req, res) => {
   console.log("Accept header:", req.headers['accept']);
 
   try {
-    // Check if client accepts SSE for streaming responses
-    const acceptsSSE = req.headers['accept']?.includes('text/event-stream');
+    // Create a new StreamableHTTPServerTransport for this request
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: undefined, // Stateless mode - no session persistence
+      enableJsonResponse: true // Support both JSON and SSE responses
+    });
 
-    if (acceptsSSE) {
-      // Use SSE transport for streaming
-      const transport = new SSEServerTransport("/mcp", res);
-      await server.connect(transport);
-      console.log("SSE transport connected successfully");
-    } else {
-      // JSON-only response
-      res.setHeader('Content-Type', 'application/json');
-      const transport = new SSEServerTransport("/mcp", res);
-      await server.connect(transport);
-      console.log("JSON transport connected successfully");
-    }
+    // Close transport when response ends
+    res.on('close', () => {
+      transport.close();
+    });
+
+    // Connect server and handle the request
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+
+    console.log("Streamable HTTP request handled successfully");
   } catch (error) {
     console.error("MCP connection error:", error);
     if (!res.headersSent) {
-      res.status(500).json({ error: "Failed to establish MCP connection" });
+      res.status(500).json({
+        jsonrpc: '2.0',
+        error: { code: -32603, message: 'Internal server error' },
+        id: null
+      });
     }
   }
 });
 
-// Legacy SSE endpoint for backward compatibility
-app.get("/sse", async (req, res) => {
-  console.log("Legacy SSE connection (redirecting to /mcp)");
-  // Redirect GET /sse to POST /mcp for backward compatibility
-  res.status(301).setHeader('Location', '/mcp').end();
+// Legacy SSE endpoint - no longer needed with Streamable HTTP
+// Inform users to use POST /mcp instead
+app.get("/sse", (req, res) => {
+  res.status(410).json({
+    error: "SSE-only transport is deprecated",
+    message: "Please use POST /mcp with Streamable HTTP protocol (2025-03-26 spec)",
+    documentation: "https://modelcontextprotocol.io/docs/concepts/transports"
+  });
 });
 
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Cogniz Remote MCP Server running on port ${PORT}`);
-  console.log(`SSE endpoint: http://localhost:${PORT}/sse`);
+  console.log(`MCP endpoint (Streamable HTTP): http://localhost:${PORT}/mcp`);
   console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`Protocol version: 2025-03-26`);
 });
