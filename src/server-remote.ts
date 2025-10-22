@@ -299,17 +299,18 @@ server.registerTool(
         ];
 
         for (const mem of results) {
-          lines.push(`## ${mem.project_name || 'Unnamed Project'}`);
-          lines.push(`**Relevance**: ${(mem.relevance_score * 100).toFixed(0)}%`);
-          if (mem.category) {
+          if (mem.category && mem.category !== 'unknown') {
             lines.push(`**Category**: ${mem.category}`);
           }
-          lines.push(`**Created**: ${new Date(mem.created_at).toLocaleDateString()}`);
+          if (mem.relevance) {
+            lines.push(`**Relevance**: ${(mem.relevance * 100).toFixed(0)}%`);
+          }
+          lines.push(`**Stored**: ${mem.stored_at || 'Unknown'}`);
           lines.push("");
-          const preview = mem.content.substring(0, 200);
-          lines.push(preview + (mem.content.length > 200 ? "..." : ""));
+          const preview = mem.content.substring(0, 300);
+          lines.push(preview + (mem.content.length > 300 ? "..." : ""));
           lines.push("");
-          lines.push(`*Memory ID: ${mem.id}*`);
+          lines.push(`*Memory ID: ${mem.memory_id || mem.id}*`);
           lines.push("---");
           lines.push("");
         }
@@ -325,12 +326,11 @@ server.registerTool(
               success: true,
               count: results.length,
               memories: results.map((m: any) => ({
-                id: m.id,
+                memory_id: m.memory_id || m.id,
                 content: m.content.substring(0, 200) + (m.content.length > 200 ? "..." : ""),
-                project: m.project_name,
                 category: m.category,
-                relevance: m.relevance_score,
-                created: m.created_at
+                relevance: m.relevance,
+                stored_at: m.stored_at
               }))
             }, null, 2)
           }]
@@ -496,12 +496,13 @@ server.registerTool(
         ];
 
         for (const proj of projects) {
-          lines.push(`## ${proj.name || proj.id}`);
-          if (proj.description) {
-            lines.push(proj.description);
-          }
-          lines.push(`**Memories**: ${proj.memory_count || 0}`);
-          lines.push(`**Created**: ${new Date(proj.created_at).toLocaleDateString()}`);
+          lines.push(`## ${proj.project_name || proj.name || proj.project_id}`);
+          lines.push(`**Project ID**: ${proj.project_id}`);
+          lines.push(`**Total Memories**: ${proj.total_memories || 0}`);
+          lines.push(`**Storage**: ${proj.total_size_mb || 0} MB`);
+          lines.push(`**Compression**: ${proj.average_compression}x`);
+          lines.push(`**Last Accessed**: ${proj.last_accessed}`);
+          lines.push(`**Created**: ${proj.created_at}`);
           lines.push("");
         }
 
@@ -517,10 +518,13 @@ server.registerTool(
               count: projects.length,
               projects: projects.map((p: any) => ({
                 id: p.id,
-                name: p.name,
-                description: p.description,
-                memory_count: p.memory_count,
-                created: p.created_at
+                project_id: p.project_id,
+                project_name: p.project_name,
+                total_memories: p.total_memories,
+                total_size_mb: p.total_size_mb,
+                average_compression: p.average_compression,
+                last_accessed: p.last_accessed,
+                created_at: p.created_at
               }))
             }, null, 2)
           }]
