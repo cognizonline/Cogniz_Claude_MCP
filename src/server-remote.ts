@@ -392,20 +392,14 @@ server.registerTool(
         const lines = [
           "# Cogniz Platform Statistics",
           "",
-          `**Plan**: ${stats.plan_name}`,
-          `**Projects**: ${stats.projects_count}`,
+          `**Plan**: ${stats.plan_name || stats.plan}`,
+          `**Projects**: ${stats.projects_count} / ${stats.projects_limit === -1 ? 'Unlimited' : stats.projects_limit}`,
           `**Total Memories**: ${stats.total_memories}`,
-          `**Storage Used**: ${stats.storage_used_mb} MB`,
+          `**Storage Used**: ${stats.memory_usage_mb} MB / ${stats.memory_limit_mb} MB`,
+          `**API Calls This Month**: ${stats.api_calls_month} / ${stats.api_calls_limit}`,
+          `**Compression Ratio**: ${stats.avg_compression}x`,
           ""
         ];
-
-        if (stats.recent_activity && stats.recent_activity.length > 0) {
-          lines.push("## Recent Activity");
-          lines.push("");
-          for (const activity of stats.recent_activity.slice(0, 5)) {
-            lines.push(`- ${activity.action} (${new Date(activity.timestamp).toLocaleDateString()})`);
-          }
-        }
 
         return {
           content: [{ type: "text", text: lines.join("\n") }]
@@ -417,11 +411,17 @@ server.registerTool(
             text: JSON.stringify({
               success: true,
               stats: {
-                plan: stats.plan_name,
-                projects: stats.projects_count,
-                memories: stats.total_memories,
-                storage_mb: stats.storage_used_mb,
-                recent_activity: stats.recent_activity
+                plan: stats.plan_name || stats.plan,
+                plan_active: stats.plan_active,
+                projects_count: stats.projects_count,
+                projects_limit: stats.projects_limit,
+                total_memories: stats.total_memories,
+                memory_usage_mb: stats.memory_usage_mb,
+                memory_limit_mb: stats.memory_limit_mb,
+                api_calls_month: stats.api_calls_month,
+                api_calls_limit: stats.api_calls_limit,
+                avg_compression: stats.avg_compression,
+                next_billing_date: stats.next_billing_date
               }
             }, null, 2)
           }]
