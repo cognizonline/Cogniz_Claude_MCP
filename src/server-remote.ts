@@ -96,6 +96,11 @@ if (!API_KEY) {
   throw new Error("COGNIZ_API_KEY environment variable is required");
 }
 
+console.log("MCP Server Configuration:");
+console.log("- API Key:", API_KEY ? `${API_KEY.substring(0, 10)}...` : "NOT SET");
+console.log("- Base URL:", BASE_URL);
+console.log("- Project ID:", DEFAULT_PROJECT_ID);
+
 const config = {
   api_key: API_KEY,
   base_url: BASE_URL,
@@ -111,19 +116,29 @@ async function makeApiRequest<T>(
 ): Promise<T> {
   const url = `${config.base_url}/wp-json/memory/v1${endpoint}`;
 
-  const response = await axios({
-    method,
-    url,
-    headers: {
-      "Authorization": `Bearer ${config.api_key}`,
-      "Content-Type": "application/json"
-    },
-    data,
-    params,
-    timeout: 30000
-  });
+  console.log(`API Request: ${method} ${url}`);
+  if (params) console.log("Query params:", params);
+  if (data) console.log("Request data:", JSON.stringify(data).substring(0, 100));
 
-  return response.data;
+  try {
+    const response = await axios({
+      method,
+      url,
+      headers: {
+        "Authorization": `Bearer ${config.api_key}`,
+        "Content-Type": "application/json"
+      },
+      data,
+      params,
+      timeout: 30000
+    });
+
+    console.log(`API Response: ${response.status}`, typeof response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`API Error for ${method} ${url}:`, error instanceof Error ? error.message : error);
+    throw error;
+  }
 }
 
 // Error handling
@@ -386,7 +401,13 @@ server.registerTool(
   },
   async (params: GetStatsInput) => {
     try {
+      console.log("Calling /user-stats API...");
       const stats = await makeApiRequest<any>("/user-stats", "GET");
+      console.log("Stats response:", JSON.stringify(stats));
+
+      if (!stats) {
+        throw new Error("No stats data returned from API");
+      }
 
       if (params.response_format === ResponseFormat.MARKDOWN) {
         const lines = [
