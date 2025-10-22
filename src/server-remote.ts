@@ -126,7 +126,8 @@ async function makeApiRequest<T>(
       url,
       headers: {
         "Authorization": `Bearer ${config.api_key}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "User-Agent": "Cogniz-MCP-Server/1.0 (Model Context Protocol)"
       },
       data,
       params,
