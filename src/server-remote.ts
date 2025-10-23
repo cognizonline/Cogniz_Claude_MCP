@@ -88,24 +88,32 @@ type GetStatsInput = z.infer<typeof GetStatsSchema>;
 type ListProjectsInput = z.infer<typeof ListProjectsSchema>;
 
 // Configuration from environment variables
-const API_KEY = process.env.COGNIZ_API_KEY;
 const BASE_URL = process.env.COGNIZ_BASE_URL || "https://cogniz.online";
 const DEFAULT_PROJECT_ID = process.env.COGNIZ_PROJECT_ID || "default";
 
-if (!API_KEY) {
-  throw new Error("COGNIZ_API_KEY environment variable is required");
-}
+// Optional: Fallback API key from environment (for testing)
+const FALLBACK_API_KEY = process.env.COGNIZ_API_KEY;
 
 console.log("MCP Server Configuration:");
-console.log("- API Key:", API_KEY ? `${API_KEY.substring(0, 10)}...` : "NOT SET");
 console.log("- Base URL:", BASE_URL);
 console.log("- Project ID:", DEFAULT_PROJECT_ID);
+console.log("- Auth Mode: User-provided API keys (OAuth Bearer tokens)");
+if (FALLBACK_API_KEY) {
+  console.log("- Fallback API Key:", `${FALLBACK_API_KEY.substring(0, 10)}...`);
+}
 
 const config = {
-  api_key: API_KEY,
   base_url: BASE_URL,
   project_id: DEFAULT_PROJECT_ID
 };
+
+// Store the current user's API key (set per-request)
+let currentUserApiKey: string | null = null;
+
+// Helper to set user API key for current request
+function setUserApiKey(apiKey: string) {
+  currentUserApiKey = apiKey;
+}
 
 // API client
 async function makeApiRequest<T>(
@@ -114,9 +122,17 @@ async function makeApiRequest<T>(
   data?: Record<string, any>,
   params?: Record<string, string>
 ): Promise<T> {
+  // Use user-provided API key, or fall back to environment variable
+  const apiKey = currentUserApiKey || FALLBACK_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("No API key provided. Please authenticate with your Cogniz API key.");
+  }
+
   const url = `${config.base_url}/wp-json/memory/v1${endpoint}`;
 
   console.log(`API Request: ${method} ${url}`);
+  console.log(`Using API key: ${apiKey.substring(0, 10)}...`);
   if (params) console.log("Query params:", params);
   if (data) console.log("Request data:", JSON.stringify(data).substring(0, 100));
 
@@ -125,7 +141,7 @@ async function makeApiRequest<T>(
       method,
       url,
       headers: {
-        "Authorization": `Bearer ${config.api_key}`,
+        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "User-Agent": "Cogniz-MCP-Server/1.0 (Model Context Protocol)"
       },
@@ -545,6 +561,18 @@ app.post("/mcp", async (req, res) => {
   console.log("Accept header:", req.headers['accept']);
 
   try {
+    // Extract user's API key from Authorization header
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const userApiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
+      console.log("User API key provided:", userApiKey.substring(0, 10) + "...");
+      setUserApiKey(userApiKey);
+    } else if (FALLBACK_API_KEY) {
+      console.log("No user API key - using fallback from environment");
+    } else {
+      console.log("WARNING: No API key available!");
+    }
+
     // Create a new StreamableHTTPServerTransport for this request
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined, // Stateless mode - no session persistence
@@ -554,6 +582,8 @@ app.post("/mcp", async (req, res) => {
     // Close transport when response ends
     res.on('close', () => {
       transport.close();
+      // Clear user API key after request completes
+      setUserApiKey('');
     });
 
     // Connect server and handle the request
