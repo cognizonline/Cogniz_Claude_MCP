@@ -107,32 +107,8 @@ const config = {
   project_id: DEFAULT_PROJECT_ID
 };
 
-// Store the current request's session ID and API key
-let currentSessionId: string | null = null;
-let currentUserApiKey: string | null = null;
-
-// Helper to set current session context
-function setSessionContext(sessionId: string | null, apiKey: string | null) {
-  currentSessionId = sessionId;
-  currentUserApiKey = apiKey;
-}
-
-// Get API key from current context (session config or Authorization header or fallback)
+// Get API key - always use environment variable
 function getCurrentApiKey(): string | null {
-  // 1. First try: API key from Authorization header (highest priority)
-  if (currentUserApiKey) {
-    return currentUserApiKey;
-  }
-
-  // 2. Second try: API key from session configuration
-  if (currentSessionId && userConfigs.has(currentSessionId)) {
-    const config = userConfigs.get(currentSessionId);
-    if (config?.api_key) {
-      return config.api_key;
-    }
-  }
-
-  // 3. Last resort: Fallback API key from environment
   return FALLBACK_API_KEY || null;
 }
 
@@ -147,7 +123,7 @@ async function makeApiRequest<T>(
   const apiKey = getCurrentApiKey();
 
   if (!apiKey) {
-    throw new Error("No API key configured. Please call the 'cogniz_configure' tool first with your Cogniz API key from https://cogniz.online/settings");
+    throw new Error("Server not configured with COGNIZ_API_KEY. This is a shared demo server - to use your own account, deploy your own instance. See: https://github.com/cognizonline/Cogniz_Claude_MCP");
   }
 
   const url = `${config.base_url}/wp-json/memory/v1${endpoint}`;
@@ -248,73 +224,11 @@ app.get("/.well-known/oauth-authorization-server", (req, res) => {
   });
 });
 
-// Store user configuration per session (populated from tool calls)
-const userConfigs = new Map<string, { api_key?: string; project_id?: string }>();
-
 // Create MCP server
 const server = new McpServer({
   name: "cogniz-memory-platform",
   version: "1.0.0"
 });
-
-// Schema for configuration tool
-const ConfigureSchema = z.object({
-  api_key: z.string()
-    .min(10, "API key must be at least 10 characters")
-    .describe("Your Cogniz Memory Platform API key (format: mp_1_xxxxxxxxxx)"),
-  project_id: z.string()
-    .optional()
-    .describe("Default project ID (optional, defaults to 'default')")
-});
-type ConfigureInput = z.infer<typeof ConfigureSchema>;
-
-// Register configuration tool (must be called first to set API key)
-server.registerTool(
-  "cogniz_configure",
-  {
-    title: "Configure Cogniz API Key",
-    description: "Set your personal Cogniz API key for this session. Get your key from https://cogniz.online/settings. You must call this first before using other tools.",
-    inputSchema: ConfigureSchema.shape,
-    annotations: {
-      readOnlyHint: false,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false
-    }
-  },
-  async (params: ConfigureInput) => {
-    try {
-      const sessionId = currentSessionId || "default";
-
-      userConfigs.set(sessionId, {
-        api_key: params.api_key,
-        project_id: params.project_id || DEFAULT_PROJECT_ID
-      });
-
-      console.log(`Configuration saved for session ${sessionId}`);
-      console.log(`API key: ${params.api_key.substring(0, 10)}...`);
-
-      return {
-        content: [{
-          type: "text",
-          text: JSON.stringify({
-            success: true,
-            message: "API key configured successfully! You can now use other Cogniz tools.",
-            session: sessionId
-          }, null, 2)
-        }]
-      };
-    } catch (error) {
-      return {
-        content: [{
-          type: "text",
-          text: `Error: ${error instanceof Error ? error.message : String(error)}`
-        }],
-        isError: true
-      };
-    }
-  }
-);
 
 // Register all tools (same as local version)
 server.registerTool(
@@ -668,30 +582,12 @@ app.post("/mcp", async (req, res) => {
   console.log("Authorization header:", req.headers['authorization'] ? "Present" : "Missing");
 
   try {
-    // Extract session ID if present (from MCP protocol)
-    const sessionId = (req.body as any)?.sessionId || null;
-
-    // Extract user's API key from Authorization header
-    const authHeader = req.headers['authorization'];
-    let userApiKey: string | null = null;
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      userApiKey = authHeader.substring(7); // Remove 'Bearer ' prefix
-      console.log("User API key from Authorization header:", userApiKey.substring(0, 10) + "...");
-    }
-
-    // Set session context (will be used by getCurrentApiKey)
-    setSessionContext(sessionId, userApiKey);
-
-    // Check if we have any API key available (from any source)
-    const availableApiKey = getCurrentApiKey();
-
-    if (!availableApiKey) {
-      // No API key - but allow connection for tool discovery and configuration
-      console.log("WARNING: No API key available - allowing unauthenticated connection");
-      console.log("User must call cogniz_configure tool to set their API key");
+    // Check if API key is configured in environment
+    const apiKey = getCurrentApiKey();
+    if (!apiKey) {
+      console.log("ERROR: No COGNIZ_API_KEY in environment - server not configured");
     } else {
-      console.log("Using API key from:", userApiKey ? "Authorization header" : sessionId ? "Session config" : "Environment fallback");
+      console.log("Using API key from environment:", apiKey.substring(0, 10) + "...");
     }
 
     // Create a new StreamableHTTPServerTransport for this request
@@ -703,8 +599,6 @@ app.post("/mcp", async (req, res) => {
     // Close transport when response ends
     res.on('close', () => {
       transport.close();
-      // Clear session context after request completes
-      setSessionContext(null, null);
     });
 
     // Connect server and handle the request
