@@ -204,6 +204,29 @@ app.get("/health", (req, res) => {
   res.json({ status: "healthy", service: "cogniz-mcp-server" });
 });
 
+// OAuth Protected Resource metadata (RFC 9728)
+// Minimal implementation - tells Claude we accept Bearer tokens
+app.get("/.well-known/oauth-protected-resource", (req, res) => {
+  res.json({
+    resource: "https://cogniz-claude-mcp.onrender.com/mcp",
+    authorization_servers: [],  // No OAuth server - users provide API keys directly
+    bearer_methods_supported: ["header"],
+    resource_documentation: "https://github.com/cognizonline/Cogniz_Claude_MCP",
+    // Custom field: Tell users how to get API keys
+    api_key_instructions: "Get your API key from https://cogniz.online/settings"
+  });
+});
+
+// Alternative: Return 404 if not using OAuth
+// This tells Claude: "No OAuth, use simple Bearer token"
+app.get("/.well-known/oauth-authorization-server", (req, res) => {
+  res.status(404).json({
+    error: "no_oauth",
+    message: "This server uses simple Bearer token authentication, not OAuth. Provide your Cogniz API key as the Bearer token.",
+    instructions: "Get your API key from https://cogniz.online/settings"
+  });
+});
+
 // Create MCP server
 const server = new McpServer({
   name: "cogniz-memory-platform",
