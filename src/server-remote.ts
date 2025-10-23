@@ -147,7 +147,7 @@ async function makeApiRequest<T>(
   const apiKey = getCurrentApiKey();
 
   if (!apiKey) {
-    throw new Error("No API key provided. Please configure your Cogniz API key in the connector settings or provide it as a Bearer token.");
+    throw new Error("No API key configured. Please call the 'cogniz_configure' tool first with your Cogniz API key from https://cogniz.online/settings");
   }
 
   const url = `${config.base_url}/wp-json/memory/v1${endpoint}`;
@@ -687,27 +687,12 @@ app.post("/mcp", async (req, res) => {
     const availableApiKey = getCurrentApiKey();
 
     if (!availableApiKey) {
-      // No API key from any source - return 401 with instructions
-      console.log("ERROR: No API key available from any source");
-      res.status(401);
-      res.setHeader('WWW-Authenticate', 'Bearer realm="Cogniz MCP Server", error="invalid_token", error_description="No API key provided"');
-      res.json({
-        jsonrpc: '2.0',
-        error: {
-          code: -32001,
-          message: 'Authentication required. Please configure your Cogniz API key.',
-          data: {
-            instructions: 'Get your API key from https://cogniz.online/settings',
-            configuration_method: 'Configure in the connector settings UI',
-            alternative_method: 'Or provide as Bearer token in Authorization header'
-          }
-        },
-        id: null
-      });
-      return;
+      // No API key - but allow connection for tool discovery and configuration
+      console.log("WARNING: No API key available - allowing unauthenticated connection");
+      console.log("User must call cogniz_configure tool to set their API key");
+    } else {
+      console.log("Using API key from:", userApiKey ? "Authorization header" : sessionId ? "Session config" : "Environment fallback");
     }
-
-    console.log("Using API key from:", userApiKey ? "Authorization header" : sessionId ? "Session config" : "Environment fallback");
 
     // Create a new StreamableHTTPServerTransport for this request
     const transport = new StreamableHTTPServerTransport({
