@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: cogniz-mcp-server
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:remote
+    envVars:
+      - key: NODE_VERSION
+        value: 18
+      - key: COGNIZ_API_KEY
+        sync: false
+      - key: COGNIZ_BASE_URL
+        value: https://cogniz.online
+      - key: COGNIZ_PROJECT_ID
+        value: default
+    healthCheckPath: /health

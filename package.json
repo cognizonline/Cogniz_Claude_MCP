@@ -1,0 +1,43 @@
+{
+  "name": "cogniz-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for Cogniz Memory Platform - Enables Claude to interact with Cogniz API",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "cogniz-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "start": "node dist/index.js",
+    "start:remote": "node dist/server-remote.js",
+    "dev": "tsx watch src/index.ts",
+    "dev:remote": "tsx watch src/server-remote.ts",
+    "build": "tsc",
+    "build:remote": "tsc && echo Remote MCP server built successfully",
+    "clean": "rm -rf dist"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mcp",
+    "cogniz",
+    "memory",
+    "claude",
+    "ai"
+  ],
+  "author": "Savannah Babette",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "axios": "^1.7.9",
+    "express": "^4.18.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
