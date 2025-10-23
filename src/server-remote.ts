@@ -582,6 +582,7 @@ server.registerTool(
 app.post("/mcp", async (req, res) => {
   console.log("New MCP connection from:", req.headers['user-agent']);
   console.log("Accept header:", req.headers['accept']);
+  console.log("Authorization header:", req.headers['authorization'] ? "Present" : "Missing");
 
   try {
     // Extract user's API key from Authorization header
@@ -592,8 +593,25 @@ app.post("/mcp", async (req, res) => {
       setUserApiKey(userApiKey);
     } else if (FALLBACK_API_KEY) {
       console.log("No user API key - using fallback from environment");
+      setUserApiKey(FALLBACK_API_KEY);
     } else {
-      console.log("WARNING: No API key available!");
+      // No API key provided and no fallback - return 401 with challenge
+      console.log("ERROR: No API key available - returning 401");
+      res.status(401);
+      res.setHeader('WWW-Authenticate', 'Bearer realm="Cogniz MCP Server", error="invalid_token", error_description="No API key provided. Get your API key from https://cogniz.online"');
+      res.json({
+        jsonrpc: '2.0',
+        error: {
+          code: -32001,
+          message: 'Authentication required. Please provide your Cogniz API key as a Bearer token.',
+          data: {
+            instructions: 'Get your API key from https://cogniz.online/settings',
+            auth_method: 'Bearer token in Authorization header'
+          }
+        },
+        id: null
+      });
+      return;
     }
 
     // Create a new StreamableHTTPServerTransport for this request
