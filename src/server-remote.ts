@@ -91,7 +91,7 @@ type ListProjectsInput = z.infer<typeof ListProjectsSchema>;
 const BASE_URL = process.env.COGNIZ_BASE_URL || "https://cogniz.online";
 const DEFAULT_PROJECT_ID = process.env.COGNIZ_PROJECT_ID || "default";
 
-// Optional: Fallback API key from environment (for testing)
+// Optional: Fallback API key from environment (for testing/demo)
 const FALLBACK_API_KEY = process.env.COGNIZ_API_KEY;
 
 console.log("MCP Server Configuration:");
@@ -99,7 +99,9 @@ console.log("- Base URL:", BASE_URL);
 console.log("- Project ID:", DEFAULT_PROJECT_ID);
 console.log("- Auth Mode: User-provided API keys (OAuth Bearer tokens)");
 if (FALLBACK_API_KEY) {
-  console.log("- Fallback API Key:", `${FALLBACK_API_KEY.substring(0, 10)}...`);
+  console.log("- Fallback API Key available for demo/testing:", `${FALLBACK_API_KEY.substring(0, 10)}...`);
+} else {
+  console.log("- No fallback key - users must provide their own API keys");
 }
 
 const config = {
@@ -107,9 +109,23 @@ const config = {
   project_id: DEFAULT_PROJECT_ID
 };
 
-// Get API key - always use environment variable
+// Store current request context (API key from Authorization header)
+let currentRequestApiKey: string | null = null;
+
+// Get API key - prioritize user-provided, fall back to environment
 function getCurrentApiKey(): string | null {
-  return FALLBACK_API_KEY || null;
+  // First: Use API key from current request's Authorization header
+  if (currentRequestApiKey) {
+    return currentRequestApiKey;
+  }
+
+  // Fallback: Use environment variable (for demo/testing)
+  if (FALLBACK_API_KEY) {
+    console.log("⚠️  Using fallback API key from environment (demo mode)");
+    return FALLBACK_API_KEY;
+  }
+
+  return null;
 }
 
 // API client
@@ -123,7 +139,7 @@ async function makeApiRequest<T>(
   const apiKey = getCurrentApiKey();
 
   if (!apiKey) {
-    throw new Error("Server not configured with COGNIZ_API_KEY. This is a shared demo server - to use your own account, deploy your own instance. See: https://github.com/cognizonline/Cogniz_Claude_MCP");
+    throw new Error("No API key available. Please configure your API key in Claude Desktop settings. Get your API key from https://cogniz.online/dashboard → API Reference");
   }
 
   const url = `${config.base_url}/wp-json/memory/v1${endpoint}`;
@@ -202,15 +218,19 @@ app.get("/health", (req, res) => {
 });
 
 // OAuth Protected Resource metadata (RFC 9728)
-// Minimal implementation - tells Claude we accept Bearer tokens
+// Tells clients we support multiple auth methods
 app.get("/.well-known/oauth-protected-resource", (req, res) => {
   res.json({
     resource: "https://cogniz-claude-mcp.onrender.com/mcp",
     authorization_servers: [],  // No OAuth server - users provide API keys directly
-    bearer_methods_supported: ["header"],
+    bearer_methods_supported: ["header", "query"],  // Support both header and query param
     resource_documentation: "https://github.com/cognizonline/Cogniz_Claude_MCP",
-    // Custom field: Tell users how to get API keys
-    api_key_instructions: "Get your API key from https://cogniz.online/settings"
+    // Custom fields: Tell users how to authenticate
+    authentication_methods: {
+      header: "Authorization: Bearer YOUR_API_KEY (recommended)",
+      query: "?api_key=YOUR_API_KEY (for Web UIs)"
+    },
+    api_key_instructions: "Get your API key from https://cogniz.online/dashboard → API Reference"
   });
 });
 
@@ -579,16 +599,49 @@ server.registerTool(
 app.post("/mcp", async (req, res) => {
   console.log("New MCP connection from:", req.headers['user-agent']);
   console.log("Accept header:", req.headers['accept']);
-  console.log("Authorization header:", req.headers['authorization'] ? "Present" : "Missing");
+
+  // Extract API key from multiple sources (in order of preference)
+
+  // Method 1: Authorization header (preferred - for Claude Desktop)
+  const authHeader = req.headers['authorization'] as string | undefined;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    currentRequestApiKey = authHeader.substring(7); // Remove "Bearer " prefix
+    console.log("✓ API key from Authorization header:", currentRequestApiKey.substring(0, 10) + "...");
+  }
+  // Method 2: Query parameter (for Web UIs that can't send headers)
+  else if (req.query.api_key) {
+    currentRequestApiKey = req.query.api_key as string;
+    console.log("✓ API key from query parameter:", currentRequestApiKey.substring(0, 10) + "...");
+    console.log("⚠️  Note: Query params are less secure than headers. Use Authorization header when possible.");
+  }
+  // Method 3: No user key provided
+  else {
+    currentRequestApiKey = null;
+    console.log("⚠️  No API key provided - will use fallback if configured");
+  }
 
   try {
-    // Check if API key is configured in environment
+    // Check if we have an API key (user-provided or fallback)
     const apiKey = getCurrentApiKey();
     if (!apiKey) {
-      console.log("ERROR: No COGNIZ_API_KEY in environment - server not configured");
-    } else {
-      console.log("Using API key from environment:", apiKey.substring(0, 10) + "...");
+      console.error("ERROR: No API key available");
+      if (!res.headersSent) {
+        return res.status(401).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32600,
+            message: 'Authentication required. Please provide your Cogniz API key via:\n' +
+                     '1. Authorization header: "Bearer YOUR_API_KEY" (recommended)\n' +
+                     '2. Query parameter: ?api_key=YOUR_API_KEY (for Web UIs)\n\n' +
+                     'Get your API key from https://cogniz.online/dashboard → API Reference'
+          },
+          id: null
+        });
+      }
+      return;
     }
+
+    console.log("Using API key:", apiKey.substring(0, 10) + "...");
 
     // Create a new StreamableHTTPServerTransport for this request
     const transport = new StreamableHTTPServerTransport({
@@ -596,9 +649,10 @@ app.post("/mcp", async (req, res) => {
       enableJsonResponse: true // Support both JSON and SSE responses
     });
 
-    // Close transport when response ends
+    // Close transport and clear API key when response ends
     res.on('close', () => {
       transport.close();
+      currentRequestApiKey = null; // Clear API key after request
     });
 
     // Connect server and handle the request
@@ -606,8 +660,14 @@ app.post("/mcp", async (req, res) => {
     await transport.handleRequest(req, res, req.body);
 
     console.log("Streamable HTTP request handled successfully");
+
+    // Clear API key after successful request
+    currentRequestApiKey = null;
   } catch (error) {
     console.error("MCP connection error:", error);
+    // Clear API key on error
+    currentRequestApiKey = null;
+
     if (!res.headersSent) {
       res.status(500).json({
         jsonrpc: '2.0',

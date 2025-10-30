@@ -1,488 +1,511 @@
 # Cogniz Memory Platform - MCP Server
 
-**Connect Claude AI to your Cogniz Memory Platform account via Model Context Protocol (MCP)**
+Official **Model Context Protocol (MCP)** server for [Cogniz Memory Platform](https://cogniz.online) - Enables AI assistants like Claude to store and retrieve memories across conversations.
 
-This MCP server enables Claude (Desktop, Code, or Web UI) to store, search, and manage memories in your Cogniz Platform account, providing persistent context across conversations.
-
----
-
-## Features
-
-✅ **Store Memories** - Save conversation context and important information
-✅ **Search Memories** - Semantic search across all your memories
-✅ **Delete Memories** - Remove unwanted entries
-✅ **Get Statistics** - View usage stats and plan details
-✅ **List Projects** - See all your projects with memory counts
-✅ **Multiple Deployment Options** - Local, Remote, or VS Code
+**🌐 Live Server:** `https://cogniz-claude-mcp.onrender.com/mcp`
 
 ---
 
-## Prerequisites
+## ✨ Features
 
-- **Node.js** 18 or higher
-- **Cogniz Platform Account** - Sign up at [cogniz.online](https://cogniz.online)
-- **API Key** - Get from Cogniz Platform Settings → API Keys
-
----
-
-## Quick Start
-
-### Get Your API Key
-
-1. Go to [cogniz.online](https://cogniz.online)
-2. Login → Settings → API Keys
-3. Create new key (format: `mp_1_xxxxxxxxxxxxx`)
-4. Copy the key for installation
+- 🔌 **MCP Protocol 2025-03-26** - Latest streamable HTTP transport
+- 🔐 **Multi-Tenant** - Each user uses their own API key
+- 🧠 **Persistent Memory** - Store and retrieve context across sessions
+- 🔍 **Semantic Search** - Find relevant memories using natural language
+- 📁 **Project Organization** - Organize memories by project
+- 💾 **Auto-Compression** - 65% storage savings with lossless compression
+- 🌍 **Remote Access** - Works with Claude Desktop AND Web UIs
 
 ---
 
-## Installation Options
+## 🚀 Quick Start
 
-### Option 1: VS Code MCP Extension (Easiest)
+### For Claude Desktop Users
 
-**For VS Code Claude Extension:**
+**1. Get Your API Key:**
+- Visit [cogniz.online/dashboard](https://cogniz.online/dashboard)
+- Navigate to **API Reference** section
+- Copy your API key (format: `mp_1_XXXXXXXXXXXX`)
 
-1. Install the Claude extension in VS Code
-2. Open VS Code Settings (JSON)
-3. Add to your `settings.json`:
+**2. Configure Claude Desktop:**
+
+Open your Claude Desktop config file:
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Linux:** `~/.config/Claude/claude_desktop_config.json`
+
+Add this configuration:
 
 ```json
 {
   "mcpServers": {
-    "cogniz": {
-      "command": "npx",
-      "args": ["-y", "@cogniz/mcp-server"],
-      "env": {
-        "COGNIZ_API_KEY": "mp_1_your_key_here",
-        "COGNIZ_BASE_URL": "https://cogniz.online",
-        "COGNIZ_PROJECT_ID": "default"
+    "cogniz-memory": {
+      "url": "https://cogniz-claude-mcp.onrender.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY_HERE"
       }
     }
   }
 }
 ```
 
-4. Reload VS Code
-5. Claude now has access to your Cogniz memories!
+**Replace `YOUR_API_KEY_HERE` with your actual API key.**
+
+**3. Restart Claude Desktop**
+
+**4. Test It:**
+```
+You: "Store a memory: MCP integration is working!"
+Claude: "I've stored that memory in your Cogniz account."
+```
+
+Verify it appears in your [dashboard](https://cogniz.online/dashboard).
 
 ---
 
-### Option 2: Claude Desktop (Local MCP)
+### For Web UI Users (ChatGPT Web UI, Claude Web UI, etc.)
 
-**For Claude Desktop App:**
+Web UIs often can't send custom headers, so we support **query parameter authentication**.
 
-1. Create config file:
-   - **macOS/Linux**: `~/.claude/config.json`
-   - **Windows**: `%APPDATA%\.claude\config.json`
+**Method 1: Custom Connector (if supported)**
 
-2. Add this configuration:
+Some Web UIs support custom connectors:
 
+1. Go to **Settings → Connectors**
+2. Add Custom Connector:
+   - **Name:** Cogniz Memory Platform
+   - **URL:** `https://cogniz-claude-mcp.onrender.com/mcp?api_key=YOUR_API_KEY`
+   - **Method:** POST
+
+**Method 2: URL with API Key**
+
+Use this URL format:
+```
+https://cogniz-claude-mcp.onrender.com/mcp?api_key=YOUR_API_KEY
+```
+
+⚠️ **Security Note:** Query parameters are less secure than headers because they appear in logs and URLs. Use this method only for Web UIs that don't support Authorization headers.
+
+---
+
+## 🛠️ Available Tools
+
+Once connected, Claude can use these MCP tools:
+
+### `cogniz_store_memory`
+Store a new memory in the Cogniz platform.
+
+**Parameters:**
+- `content` (required): The text/information to store
+- `project_id` (optional): Project identifier (default: "default")
+- `project_name` (optional): Human-readable project name
+- `category` (optional): Category tag (e.g., "code-snippets", "meeting-notes")
+
+**Example:**
+```
+"Store this code snippet in my development project: async function fetchData() { ... }"
+```
+
+---
+
+### `cogniz_search_memories`
+Search memories using semantic search.
+
+**Parameters:**
+- `query` (required): Search text
+- `project_id` (optional): Limit search to specific project
+- `limit` (optional): Max results (1-100, default: 10)
+
+**Example:**
+```
+"Search my memories for API authentication examples"
+```
+
+---
+
+### `cogniz_list_projects`
+List all your projects.
+
+**Example:**
+```
+"Show me all my projects"
+```
+
+---
+
+### `cogniz_get_stats`
+View your usage statistics.
+
+**Returns:**
+- Current plan
+- Memory usage
+- API calls
+- Project count
+- Storage stats
+
+**Example:**
+```
+"How much memory am I using?"
+```
+
+---
+
+### `cogniz_delete_memory`
+Delete a specific memory by ID.
+
+**Parameters:**
+- `memory_id` (required): ID of memory to delete
+
+**Example:**
+```
+"Delete memory mem_12345"
+```
+
+---
+
+## 🔐 Authentication Methods
+
+This server supports **two authentication methods** to work with different clients:
+
+### Method 1: Authorization Header (Recommended)
+
+**Best for:** Claude Desktop, API clients, secure environments
+
+**Format:**
+```http
+POST /mcp HTTP/1.1
+Authorization: Bearer mp_1_YOUR_API_KEY
+Content-Type: application/json
+```
+
+**Pros:**
+- ✅ More secure
+- ✅ Not visible in URLs/logs
+- ✅ Standard HTTP authentication
+
+---
+
+### Method 2: Query Parameter
+
+**Best for:** Web UIs that can't send custom headers
+
+**Format:**
+```
+https://cogniz-claude-mcp.onrender.com/mcp?api_key=mp_1_YOUR_API_KEY
+```
+
+**Pros:**
+- ✅ Works with Web UIs
+- ✅ No header support needed
+
+**Cons:**
+- ⚠️ Less secure (visible in URLs)
+- ⚠️ Appears in server logs
+- ⚠️ May be cached by proxies
+
+---
+
+## 📊 Pricing Plans
+
+The MCP server is **free to use**. You only pay for your Cogniz Memory Platform account:
+
+| Plan | Price | Memory Limit | Projects | API Calls/Month |
+|------|-------|--------------|----------|-----------------|
+| **Starter** | Free (30 days) | 100 MB | 3 | 1,000 |
+| **Plus** | $7/month | Unlimited | 15 | 15,000 |
+| **Pro** | $49/month | Unlimited | Unlimited | 100,000 |
+| **Enterprise** | Custom | Unlimited | Unlimited | Unlimited |
+
+[View detailed pricing](https://cogniz.online/dashboard#pricing-comparison-section)
+
+---
+
+## 🧪 Testing
+
+### Health Check
+
+```bash
+curl https://cogniz-claude-mcp.onrender.com/health
+```
+
+**Expected Response:**
 ```json
 {
-  "mcpServers": {
-    "cogniz": {
-      "command": "npx",
-      "args": ["-y", "@cogniz/mcp-server"],
-      "env": {
-        "COGNIZ_API_KEY": "mp_1_your_key_here",
-        "COGNIZ_BASE_URL": "https://cogniz.online",
-        "COGNIZ_PROJECT_ID": "default"
-      }
-    }
-  }
+  "status": "healthy",
+  "service": "cogniz-mcp-server"
 }
 ```
 
-3. Restart Claude Desktop
-4. Start using memory tools in conversations!
+### Test Authentication (Header Method)
+
+```bash
+curl -X POST https://cogniz-claude-mcp.onrender.com/mcp \
+  -H "Authorization: Bearer mp_1_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list"
+  }'
+```
+
+### Test Authentication (Query Method)
+
+```bash
+curl -X POST "https://cogniz-claude-mcp.onrender.com/mcp?api_key=mp_1_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/list"
+  }'
+```
+
+**Expected:** List of 5 available MCP tools
 
 ---
 
-### Option 3: Deploy Your Own Remote Server
+## 🏗️ Self-Hosting
 
-**For Claude Web UI, ChatGPT, or sharing with a team:**
+Want to run your own instance? Clone and deploy:
 
-#### Deploy to Render.com (Free)
+### Prerequisites
 
-1. **Fork the repository:**
-   ```
-   https://github.com/cognizonline/Cogniz_Claude_MCP
-   ```
+- Node.js 18+
+- TypeScript
+- Render account (or any Node.js hosting)
 
-2. **Sign up at [render.com](https://render.com)**
+### Deploy to Render
 
-3. **Create New Web Service:**
-   - Connect your forked GitHub repository
-   - Build Command: `npm install && npm run build`
-   - Start Command: `npm run start:remote`
+**1. Fork this repository**
 
-4. **Add Environment Variables:**
-   ```
-   COGNIZ_API_KEY = mp_1_your_key_here
-   COGNIZ_BASE_URL = https://cogniz.online
-   COGNIZ_PROJECT_ID = default
-   ```
+**2. Create Web Service on Render:**
+- Connect your GitHub fork
+- Build Command: `npm install && npm run build`
+- Start Command: `npm start`
+- Environment Variables:
+  - `COGNIZ_BASE_URL=https://cogniz.online`
+  - `COGNIZ_PROJECT_ID=default`
+  - Optional: `COGNIZ_API_KEY` (for demo/testing only)
 
-5. **Deploy and get your URL:**
-   ```
-   https://your-service-name.onrender.com/mcp
-   ```
+**3. Configure Custom Domain (Optional):**
+- Professional plan required ($19/month)
+- Add CNAME: `your-subdomain.com` → `your-service.onrender.com`
+- SSL auto-configured
 
-6. **Add to Claude Web UI:**
-   - Claude.ai → Settings → Connectors
-   - Add custom connector
-   - Enter your server URL
-
-#### Deploy to Other Platforms
-
-**Railway:**
-```bash
-git clone https://github.com/cognizonline/Cogniz_Claude_MCP
-cd cogniz-mcp-server
-railway up
-railway env set COGNIZ_API_KEY=mp_1_your_key
+**4. Update OAuth Discovery URL:**
+In `src/server-remote.ts` line 224:
+```typescript
+resource: "https://your-domain.com/mcp",
 ```
 
-**Vercel:**
-```bash
-vercel deploy
-vercel env add COGNIZ_API_KEY
-```
+**5. Deploy and test!**
 
-**Self-Hosted:**
+---
+
+## 📚 Documentation
+
+- **MCP Protocol:** https://modelcontextprotocol.io
+- **Cogniz Platform:** https://cogniz.online/documentation
+- **API Reference:** https://cogniz.online/dashboard#api-reference
+- **Support:** https://cogniz.online/contact
+
+---
+
+## 🔧 Development
+
+### Local Setup
+
 ```bash
-git clone https://github.com/cognizonline/Cogniz_Claude_MCP
-cd cogniz-mcp-server
+# Clone repository
+git clone https://github.com/cognizonline/Cogniz_Claude_MCP.git
+cd Cogniz_Claude_MCP
+
+# Install dependencies
 npm install
+
+# Build TypeScript
 npm run build
 
-export COGNIZ_API_KEY=mp_1_your_key
+# Set environment variables
 export COGNIZ_BASE_URL=https://cogniz.online
-npm run start:remote
+export COGNIZ_API_KEY=mp_1_YOUR_TEST_KEY
+
+# Start server
+npm start
+
+# Server runs on http://localhost:3000
 ```
 
-Server runs on port 3000 by default. Access at `http://localhost:3000/mcp`
-
----
-
-## Available Tools
-
-Once installed, Claude can use these tools:
-
-### 1. **cogniz_store_memory**
-Save information to your Cogniz account.
-
-**Parameters:**
-- `content` (required) - The memory content to store
-- `project_id` (optional) - Project identifier
-- `project_name` (optional) - Human-readable project name
-- `category` (optional) - Category tag for organization
-
-**Example:**
-```
-Claude, store this memory: "Project Phoenix uses React 18 with TypeScript and PostgreSQL"
-```
-
----
-
-### 2. **cogniz_search_memories**
-Search your memories using semantic search.
-
-**Parameters:**
-- `query` (required) - Search query text
-- `project_id` (optional) - Limit to specific project
-- `limit` (optional) - Max results (default: 10)
-- `format` (optional) - "markdown" or "json" (default: "markdown")
-
-**Example:**
-```
-Claude, search my memories for "React and PostgreSQL"
-```
-
----
-
-### 3. **cogniz_get_memory**
-Retrieve a specific memory by ID.
-
-**Parameters:**
-- `memory_id` (required) - The memory ID to retrieve
-
-**Example:**
-```
-Claude, get memory with ID: local_abc123xyz
-```
-
----
-
-### 4. **cogniz_delete_memory**
-Delete a specific memory.
-
-**Parameters:**
-- `memory_id` (required) - The memory ID to delete
-
-**Example:**
-```
-Claude, delete memory with ID: local_abc123xyz
-```
-
----
-
-### 5. **cogniz_get_stats**
-View your account statistics.
-
-**Returns:**
-- Plan name and status
-- Project count and limits
-- Total memories stored
-- Storage usage
-- API calls this month
-- Average compression ratio
-- Next billing date
-
-**Example:**
-```
-Claude, show me my Cogniz statistics
-```
-
----
-
-### 6. **cogniz_list_projects**
-List all your projects with details.
-
-**Parameters:**
-- `format` (optional) - "markdown" or "json" (default: "markdown")
-
-**Returns:**
-- Project ID and name
-- Memory count per project
-- Storage size
-- Compression ratio
-- Last accessed date
-
-**Example:**
-```
-Claude, list all my Cogniz projects
-```
-
----
-
-## Usage Examples
-
-### Storing Memories
-
-```
-Claude, store this information: "Our API uses JWT tokens with 1-hour expiration"
-
-Claude, save this to my 'backend-project': "Database credentials are in AWS Secrets Manager"
-```
-
-### Searching Memories
-
-```
-Claude, search my memories for "JWT tokens"
-
-Claude, find all memories about "database" in my backend-project
-```
-
-### Managing Memories
-
-```
-Claude, show my Cogniz statistics
-
-Claude, list my projects
-
-Claude, delete memory with ID: local_abc123xyz
-```
-
----
-
-## Architecture
-
-```
-Claude (Desktop/Code/Web)
-    ↓ MCP Protocol
-MCP Server (This package)
-    ↓ HTTPS REST API
-Cogniz Platform (cogniz.online)
-    ↓ Stores in
-Database (MySQL with AI compression)
-```
-
----
-
-## Security
-
-✅ **Your API key is secure:**
-- Stored only in your local config or deployment environment
-- Transmitted only over HTTPS
-- Never logged or stored by the MCP server
-- Each user's data is completely isolated
-
-✅ **Best Practices:**
-- Never commit API keys to version control
-- Use environment variables for deployment
-- Rotate keys regularly in Cogniz Platform settings
-- Each user should deploy their own server for privacy
-
----
-
-## Important: Per-User Authentication
-
-**Current Limitation:**
-
-As of October 2025, Claude Web UI and ChatGPT **do not support per-user authentication** for MCP servers. This means:
-
-- ❌ You cannot provide your API key when connecting to a shared server
-- ✅ You must deploy your own server with YOUR API key
-
-**Solution:**
-
-Each user should deploy their own MCP server instance (see "Option 3: Deploy Your Own Remote Server" above). This ensures:
-- ✅ Your API key stays in YOUR deployment
-- ✅ Your data is completely private
-- ✅ No shared accounts
-
-**Future:**
-
-The server code is ready for per-user authentication! When Claude/ChatGPT add support for custom Bearer tokens, users will be able to:
-- Connect to a shared server
-- Provide their own API key
-- Access only their own memories
-
-See `FINAL_SOLUTION.md` for technical details.
-
----
-
-## Development
-
-### Build from Source
+### Test Locally
 
 ```bash
-git clone https://github.com/cognizonline/Cogniz_Claude_MCP
-cd cogniz-mcp-server
-npm install
-npm run build
-```
+# Health check
+curl http://localhost:3000/health
 
-### Run Locally
-
-```bash
-# For testing Remote MCP
-export COGNIZ_API_KEY=mp_1_your_key
-npm run start:remote
-
-# For testing Local MCP (stdio)
-node dist/index.js
-```
-
-### Project Structure
-
-```
-cogniz-mcp-server/
-├── src/
-│   ├── index.ts           # Local MCP server (stdio)
-│   └── server-remote.ts   # Remote MCP server (HTTP/SSE)
-├── package.json
-├── tsconfig.json
-├── render.yaml           # Render.com deployment config
-└── README.md
+# List tools
+curl -X POST http://localhost:3000/mcp \
+  -H "Authorization: Bearer mp_1_YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 ```
 
 ---
 
-## Troubleshooting
+## 🤝 Contributing
 
-### "No API key provided"
-- Check environment variable `COGNIZ_API_KEY` is set
-- Verify API key format: `mp_1_xxxxxxxxxxxxx`
-- Ensure key is active at cogniz.online
+Contributions welcome! Please:
 
-### "Authentication failed"
-- API key may be invalid or expired
-- Get a new key from cogniz.online Settings → API Keys
-- Update your configuration
-
-### "Connection refused" (Remote deployment)
-- Check server is running on correct port
-- Verify environment variables are set
-- Check server logs for errors
-
-### VS Code/Desktop not seeing tools
-1. Check config file location:
-   - VS Code: `.vscode/settings.json`
-   - Desktop: `~/.claude/config.json` (or `%APPDATA%\.claude\config.json`)
-2. Verify API key is correct
-3. Restart application
-4. Check logs for errors
-
-### Bot Protection Blocking
-If you see "Access denied by Imunify360 bot-protection":
-- This affects some hosting providers
-- Solution: Deploy your own server instance
-- Your own deployment won't be blocked
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
 
 ---
 
-## Pricing
+## 📋 Troubleshooting
 
-**MCP Server:** Free and open source (MIT License)
+### "Authentication required" error
 
-**Cogniz Platform Subscription** (required):
-- **Starter**: $9/month - 10 projects, 1GB storage
-- **Pro**: $19/month - Unlimited projects, 10GB storage
-- **Enterprise**: $49/month - Unlimited everything, priority support
+**Cause:** No API key provided
 
-Learn more at [cogniz.online/pricing](https://cogniz.online/pricing)
+**Fix:**
+- Desktop: Add `Authorization: Bearer YOUR_KEY` to config
+- Web UI: Add `?api_key=YOUR_KEY` to URL
+
+### "Invalid API key" (401 error)
+
+**Cause:** API key is wrong or expired
+
+**Fix:**
+- Get fresh API key from [dashboard](https://cogniz.online/dashboard)
+- Verify format: `mp_1_XXXXXXXXXXXX`
+
+### "Rate limit exceeded" (429 error)
+
+**Cause:** Exceeded monthly API call limit
+
+**Fix:**
+- Check usage in dashboard
+- Upgrade plan for more calls
+- Limit resets monthly
+
+### Connection timeout
+
+**Cause:** Server on free Render plan (cold starts)
+
+**Fix:**
+- Wait 30-60 seconds for warmup
+- Or upgrade to Professional plan ($19/month) for always-on
 
 ---
 
-## Support
+## 💰 Hosting Costs
 
-- **Platform Documentation**: [cogniz.online/docs](https://cogniz.online/docs)
-- **MCP Issues**: [GitHub Issues](https://github.com/cognizonline/Cogniz_Claude_MCP/issues)
-- **Email Support**: support@cogniz.online
+### Free Render Plan
+- ✅ Free forever
+- ⚠️ Cold starts (30-60s delay after 15min idle)
+- ⚠️ Limited resources
+
+### Professional Render Plan ($19/month)
+- ✅ Always-on (no cold starts)
+- ✅ Better performance
+- ✅ Custom domains
+- ✅ Priority support
+
+**Recommended for production use.**
 
 ---
 
-## License
+## 🔒 Security
+
+### API Key Safety
+
+- ✅ Keys transmitted via HTTPS only
+- ✅ Server doesn't store keys (stateless)
+- ✅ Each request isolated
+- ✅ SSL/TLS encryption
+
+### Best Practices
+
+1. **Never commit API keys to git**
+2. **Use Authorization header when possible** (more secure than query params)
+3. **Rotate keys periodically**
+4. **Monitor usage** for suspicious activity
+5. **Use query params only for Web UIs** that don't support headers
+
+---
+
+## 🌐 Protocol Details
+
+### MCP Version
+`2025-03-26` (Streamable HTTP)
+
+### Transport
+HTTP POST with streaming support
+
+### Endpoints
+- `POST /mcp` - Main MCP endpoint
+- `GET /health` - Health check
+- `GET /.well-known/oauth-protected-resource` - Auth discovery
+
+### Supported Methods
+- `tools/list` - List available tools
+- `tools/call` - Execute a tool
+- `resources/list` - List resources (future)
+
+---
+
+## 📞 Support
+
+- **Issues:** [GitHub Issues](https://github.com/cognizonline/Cogniz_Claude_MCP/issues)
+- **Email:** support@cogniz.online
+- **Documentation:** [cogniz.online/documentation](https://cogniz.online/documentation)
+
+---
+
+## 📄 License
 
 MIT License - See LICENSE file for details
 
 ---
 
-## Credits
+## 🙏 Acknowledgments
 
-Built with:
-- [@modelcontextprotocol/sdk](https://github.com/modelcontextprotocol/typescript-sdk) - Official MCP SDK
-- [Cogniz Memory Platform](https://cogniz.online) - AI-powered memory compression and storage
+- Built on [Model Context Protocol](https://modelcontextprotocol.io) by Anthropic
+- Powered by [Cogniz Memory Platform](https://cogniz.online)
+- TypeScript + Express + MCP SDK
 
 ---
 
-## Changelog
+## 🔄 Changelog
 
-### v1.1.0 (2025-10-23)
+### v1.2.0 (Latest - January 2025)
+- ✅ Multi-tenant support with user-provided API keys
+- ✅ Authorization header authentication (recommended)
+- ✅ Query parameter authentication (for Web UIs)
+- ✅ Improved error messages
+- ✅ OAuth discovery metadata
+
+### v1.1.0 (October 2024)
 - ✅ Updated to MCP Streamable HTTP protocol (2025-03-26)
-- ✅ Fixed API field mappings for search, projects, and stats
-- ✅ Added OAuth discovery endpoints for future authentication
-- ✅ Improved error handling and logging
-- ✅ Ready for per-user authentication when platforms support it
+- ✅ Fixed API field mappings
+- ✅ Improved error handling
 
-### v1.0.0 (2025-10-20)
+### v1.0.0
 - Initial release
-- Core MCP tools: store, search, delete, stats, projects
-- Local and Remote MCP support
-- Claude Code, Desktop, and Web UI integration
+- Basic MCP tools
+- Streamable HTTP transport
 
 ---
 
-**Ready to give Claude persistent memory? Get started now!**
+**Live MCP Server:** https://cogniz-claude-mcp.onrender.com/mcp
 
-```bash
-# Quick start for VS Code
-npm install -g @cogniz/mcp-server
+**Get Your API Key:** https://cogniz.online/dashboard
 
-# Or deploy your own server
-git clone https://github.com/cognizonline/Cogniz_Claude_MCP
-```
+**Need Help?** Open an issue or contact support@cogniz.online
 
-Visit [cogniz.online](https://cogniz.online) to create your account and get your API key.
+---
+
+Made with ❤️ for the AI community
