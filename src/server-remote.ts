@@ -661,8 +661,8 @@ app.post("/mcp", async (req, res) => {
 
     console.log("Streamable HTTP request handled successfully");
 
-    // Clear API key after successful request
-    currentRequestApiKey = null;
+    // Note: API key will be cleared by res.on('close') event handler above
+    // DO NOT clear here - tools may still be executing asynchronously
   } catch (error) {
     console.error("MCP connection error:", error);
     // Clear API key on error
