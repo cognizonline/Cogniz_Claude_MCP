@@ -212,6 +212,214 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
+// Landing page for root URL
+app.get("/", (req, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cogniz Memory Platform - MCP Server</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 32px;
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 18px;
+            margin-bottom: 30px;
+        }
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #10b981;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+        .status::before {
+            content: '●';
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .info-box {
+            background: #f7f7f7;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .info-box h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 18px;
+        }
+        .info-box p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+        code {
+            background: #e5e7eb;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            color: #dc2626;
+        }
+        .endpoint-list {
+            margin: 20px 0;
+        }
+        .endpoint {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 6px;
+            margin: 8px 0;
+        }
+        .endpoint .method {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+            min-width: 60px;
+            text-align: center;
+        }
+        .endpoint .path {
+            font-family: 'Monaco', 'Courier New', monospace;
+            color: #333;
+        }
+        .cta-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 30px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.2s;
+            display: inline-block;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #999;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            🧠 Cogniz Memory Platform
+        </h1>
+        <div class="subtitle">Model Context Protocol (MCP) Server</div>
+
+        <div class="status">
+            MCP Server Online
+        </div>
+
+        <div class="info-box">
+            <h3>📡 MCP Endpoint</h3>
+            <p>Connect your AI assistant to this MCP server:</p>
+            <p><code>https://app.cogniz.online/mcp</code></p>
+        </div>
+
+        <div class="info-box">
+            <h3>🔐 Authentication</h3>
+            <p><strong>For Claude Desktop:</strong> Add Authorization header with your API key</p>
+            <p><strong>For Web UIs:</strong> Add <code>?api_key=YOUR_KEY</code> to the URL</p>
+            <p style="margin-top: 12px;">Get your API key from your <a href="https://cogniz.online/dashboard" style="color: #667eea;">Cogniz Dashboard</a></p>
+        </div>
+
+        <div class="endpoint-list">
+            <h3 style="margin-bottom: 12px; color: #333;">Available Endpoints</h3>
+            <div class="endpoint">
+                <span class="method">POST</span>
+                <span class="path">/mcp</span>
+                <span style="color: #666;">MCP protocol endpoint</span>
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/health</span>
+                <span style="color: #666;">Health check</span>
+            </div>
+            <div class="endpoint">
+                <span class="method">GET</span>
+                <span class="path">/.well-known/oauth-protected-resource</span>
+                <span style="color: #666;">OAuth metadata</span>
+            </div>
+        </div>
+
+        <div class="cta-buttons">
+            <a href="https://cogniz.online/dashboard" class="btn btn-primary">
+                Get Your API Key →
+            </a>
+            <a href="https://github.com/cognizonline/Cogniz_Claude_MCP" class="btn btn-secondary">
+                View Documentation
+            </a>
+        </div>
+
+        <div class="footer">
+            Powered by <strong>Cogniz Memory Platform</strong> | <a href="https://cogniz.online" style="color: #667eea;">cogniz.online</a>
+        </div>
+    </div>
+</body>
+</html>
+  `);
+});
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.json({ status: "healthy", service: "cogniz-mcp-server" });
@@ -221,7 +429,7 @@ app.get("/health", (req, res) => {
 // Tells clients we support multiple auth methods
 app.get("/.well-known/oauth-protected-resource", (req, res) => {
   res.json({
-    resource: "https://cogniz-claude-mcp.onrender.com/mcp",
+    resource: "https://app.cogniz.online/mcp",
     authorization_servers: [],  // No OAuth server - users provide API keys directly
     bearer_methods_supported: ["header", "query"],  // Support both header and query param
     resource_documentation: "https://github.com/cognizonline/Cogniz_Claude_MCP",

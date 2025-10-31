@@ -2,7 +2,7 @@
 
 Official **Model Context Protocol (MCP)** server for [Cogniz Memory Platform](https://cogniz.online) - Enables AI assistants like Claude to store and retrieve memories across conversations.
 
-**🌐 Live Server:** `https://cogniz-claude-mcp.onrender.com/mcp`
+**🌐 Live Server:** `https://app.cogniz.online/mcp`
 
 ---
 
@@ -40,7 +40,7 @@ Add this configuration:
 {
   "mcpServers": {
     "cogniz-memory": {
-      "url": "https://cogniz-claude-mcp.onrender.com/mcp",
+      "url": "https://app.cogniz.online/mcp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY_HERE"
       }
@@ -74,14 +74,14 @@ Some Web UIs support custom connectors:
 1. Go to **Settings → Connectors**
 2. Add Custom Connector:
    - **Name:** Cogniz Memory Platform
-   - **URL:** `https://cogniz-claude-mcp.onrender.com/mcp?api_key=YOUR_API_KEY`
+   - **URL:** `https://app.cogniz.online/mcp?api_key=YOUR_API_KEY`
    - **Method:** POST
 
 **Method 2: URL with API Key**
 
 Use this URL format:
 ```
-https://cogniz-claude-mcp.onrender.com/mcp?api_key=YOUR_API_KEY
+https://app.cogniz.online/mcp?api_key=YOUR_API_KEY
 ```
 
 ⚠️ **Security Note:** Query parameters are less secure than headers because they appear in logs and URLs. Use this method only for Web UIs that don't support Authorization headers.
@@ -191,7 +191,7 @@ Content-Type: application/json
 
 **Format:**
 ```
-https://cogniz-claude-mcp.onrender.com/mcp?api_key=mp_1_YOUR_API_KEY
+https://app.cogniz.online/mcp?api_key=mp_1_YOUR_API_KEY
 ```
 
 **Pros:**
@@ -239,7 +239,7 @@ curl https://cogniz-claude-mcp.onrender.com/health
 ### Test Authentication (Header Method)
 
 ```bash
-curl -X POST https://cogniz-claude-mcp.onrender.com/mcp \
+curl -X POST https://app.cogniz.online/mcp \
   -H "Authorization: Bearer mp_1_YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -252,7 +252,7 @@ curl -X POST https://cogniz-claude-mcp.onrender.com/mcp \
 ### Test Authentication (Query Method)
 
 ```bash
-curl -X POST "https://cogniz-claude-mcp.onrender.com/mcp?api_key=mp_1_YOUR_API_KEY" \
+curl -X POST "https://app.cogniz.online/mcp?api_key=mp_1_YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "jsonrpc": "2.0",
@@ -500,7 +500,7 @@ MIT License - See LICENSE file for details
 
 ---
 
-**Live MCP Server:** https://cogniz-claude-mcp.onrender.com/mcp
+**Live MCP Server:** https://app.cogniz.online/mcp
 
 **Get Your API Key:** https://cogniz.online/dashboard
 
